@@ -1,15 +1,38 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 import phonenumbers
 from phonenumbers import geocoder, carrier, timezone
 import datetime
+import os
+import requests
 
 app = Flask(__name__)
+
+# Flask dan API Node.js di VPS yang sama -> pakai localhost.
+# Kalau mau pakai URL tunnel, set env API_BASE.
+API_BASE = os.environ.get("API_BASE", "http://127.0.0.1:3001").rstrip("/")
+
+
+def api_get(path, default=None):
+    try:
+        r = requests.get(f"{API_BASE}{path}", timeout=5)
+        r.raise_for_status()
+        return r.json()
+    except Exception:
+        return default
+
+
+def api_post(path, payload):
+    try:
+        r = requests.post(f"{API_BASE}{path}", json=payload, timeout=5)
+        r.raise_for_status()
+        return r.json()
+    except Exception:
+        return None
 
 
 def analisis_data(no_input):
     logs = []
     logs.append(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Memulakan imbasan OSINT...")
-
     try:
         if not no_input or not no_input.strip():
             logs.append("[!] Input kosong.")
@@ -45,10 +68,8 @@ def analisis_data(no_input):
             "link": f"https://www.truecaller.com/search?q={no_input[1:]}",
             "logs": logs
         }
-
         logs.append("[+] Analisis selesai dengan jayanya.")
         return data
-
     except phonenumbers.NumberParseException as e:
         logs.append(f"[!] Ralat parsing: {str(e)}")
         return {"logs": logs, "error": True}
@@ -63,4 +84,45 @@ def index():
     if request.method == 'POST':
         no_tel = request.form.get('nombor', '')
         hasil = analisis_data(no_tel)
-    return render_template('index.html', hasil=hasil) 
+
+    views = api_get('/api/views', {'count': 0}) or {'count': 0}
+    rate = api_get('/api/rate', {'total': 0, 'avg': 0}) or {'total': 0, 'avg': 0}
+    comments = api_get('/api/comments', []) or []
+
+    # bump view tiap GET halaman
+    if request.method == 'GET':
+        bumped = api_post('/api/views', {})
+        if bumped:
+            views = bumped
+
+    return render_template(
+        'index.html',
+        hasil=hasil,
+        views=views.get('count', 0),
+        rate=rate,
+        comments=comments
+    )
+
+
+@app.route('/api/rate', methods=['POST'])
+def proxy_rate():
+    data = request.get_json(silent=True) or {}
+    res = api_post('/api/rate', data)
+    if res is None:
+        return jsonify({'error': 'API down'}), 502
+    return jsonify(res)
+
+
+@app.route('/api/comments', methods=['POST'])
+def proxy_comment():
+    data = request.get_json(silent=True) or {}
+    res = api_post('/api/comments', data)
+    if res is None:
+        return jsonify({'error': 'API down'}), 502
+    return jsonify(res)
+
+
+@app.route('/api/comments', methods=['GET'])
+def proxy_comment_list():
+    res = api_get('/api/comments', [])
+    return jsonify(res) 
