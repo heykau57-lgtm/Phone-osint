@@ -101,8 +101,11 @@ def index():
 
     # Bump view tiap GET halaman + ambil IP sebenar pengunjung
     if request.method == 'GET':
-        # Ambil IP dari header Vercel (X-Forwarded-For), fallback ke remote_addr
-        user_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+        # --- BAHAGIAN YANG DIBETULKAN ---
+        user_ip = request.headers.get('x-vercel-forwarded-for') or \
+                  request.headers.get('x-real-ip') or \
+                  request.headers.get('x-forwarded-for') or \
+                  request.remote_addr
         
         # Hantar IP tersebut ke API Node
         bumped = api_post('/api/views', {}, forwarded_ip=user_ip)
