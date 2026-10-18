@@ -20,6 +20,8 @@
     --cyan-soft: #e0fbff;
     --ok: #16a34a;
     --bad: #dc2626;
+    --star: #f5a623;
+    --star-empty: #d8dee6;
     --radius: 14px;
     --shadow-sm: 0 1px 2px rgba(13,17,23,.06);
     --shadow-md: 0 6px 24px rgba(13,17,23,.08);
@@ -47,6 +49,7 @@
   .head{
     display:flex; align-items:center; gap:14px;
     margin-bottom: 30px;
+    flex-wrap: wrap;
   }
   .logo{
     width:44px; height:44px; border-radius:13px;
@@ -57,6 +60,7 @@
     flex-shrink: 0;
   }
   .logo svg{ width:22px; height:22px; filter: drop-shadow(0 0 6px rgba(0,229,255,.8)); }
+  .head-text{ flex:1; min-width: 160px; }
   .head h1{
     font-size: 1.18rem; font-weight: 700; letter-spacing:-.015em;
   }
@@ -64,6 +68,19 @@
   .head p{
     font-size: .78rem; color: var(--text-dim); margin-top:3px; letter-spacing:.02em;
   }
+  .views{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:.75rem; font-weight:600;
+    color: var(--text-dim);
+    padding: 6px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    box-shadow: var(--shadow-sm);
+    white-space: nowrap;
+  }
+  .views svg{ width:14px; height:14px; color: var(--cyan-deep); }
+  .views b{ color: var(--text); font-weight:700; }
 
   /* Search Card */
   .search-card{
@@ -239,6 +256,103 @@
   .card.err .card-head .title svg{ color: var(--bad); }
   .card.err .logs{ background:#1a0d0d; color:#ffb4b4; }
 
+  /* Rating & Comment */
+  .rate-body{ padding: 18px 20px 20px; }
+
+  .stars{
+    display:flex; gap:6px; margin-bottom: 14px;
+  }
+  .stars button{
+    background: none; border: none; padding: 0; cursor: pointer;
+    color: var(--star-empty);
+    transition: color .12s, transform .12s;
+    display: inline-flex;
+    box-shadow: none;
+  }
+  .stars button:hover{ background: none; box-shadow: none; }
+  .stars button svg{ width: 26px; height: 26px; }
+  .stars button.active,
+  .stars button.hover{ color: var(--star); }
+  .stars button:active{ transform: scale(.9); }
+
+  .rate-meta{
+    font-size:.75rem; color: var(--text-dim);
+    margin-bottom: 16px;
+  }
+  .rate-meta b{ color: var(--text); }
+
+  .comment-form{ display:flex; flex-direction: column; gap:10px; }
+  .comment-form .input-wrap > svg{ left: 14px; }
+  .comment-form input[type=text],
+  .comment-form textarea{
+    width:100%;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px 14px;
+    font-size:.88rem;
+    font-family: inherit;
+    border-radius: 10px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s, background .15s;
+    resize: vertical;
+    min-height: 70px;
+  }
+  .comment-form input[type=text]{
+    padding-left: 40px;
+    min-height: auto;
+  }
+  .comment-form input[type=text]:focus,
+  .comment-form textarea:focus{
+    border-color: var(--cyan-deep);
+    background: var(--surface);
+    box-shadow: var(--shadow-cyan);
+  }
+  .comment-form .send{
+    align-self: flex-end;
+    padding: 10px 18px;
+    font-size:.78rem;
+  }
+
+  .comment-list{
+    margin-top: 18px;
+    display: flex; flex-direction: column; gap: 10px;
+    max-height: 260px; overflow-y: auto;
+  }
+  .comment-list::-webkit-scrollbar{ width:6px; }
+  .comment-list::-webkit-scrollbar-thumb{ background: var(--border); border-radius:3px; }
+
+  .comment-item{
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .comment-item .meta{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom: 5px;
+    gap: 10px;
+  }
+  .comment-item .name{
+    font-size:.78rem; font-weight:700; color: var(--text);
+  }
+  .comment-item .time{
+    font-size:.68rem; color: var(--text-soft);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    white-space: nowrap;
+  }
+  .comment-item .text{
+    font-size:.82rem; color: var(--text-dim);
+    line-height: 1.5;
+    word-break: break-word;
+  }
+  .empty-comment{
+    text-align:center;
+    font-size:.78rem;
+    color: var(--text-soft);
+    padding: 12px 0;
+  }
+
   /* Footer */
   .foot{
     text-align:center;
@@ -255,6 +369,7 @@
     button{ justify-content:center; }
     .row{ flex-direction: column; gap:5px; }
     .row .v{ text-align:left; }
+    .views{ font-size: .7rem; }
   }
 </style>
 </head>
@@ -269,9 +384,17 @@
         <circle cx="12" cy="12" r="9" opacity=".35"/>
       </svg>
     </div>
-    <div>
+    <div class="head-text">
       <h1>Phone <span>OSINT</span></h1>
       <p>Carrier &amp; geo lookup</p>
+    </div>
+    <div class="views" id="viewsBox" title="Jumlah lawatan">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+        <circle cx="12" cy="12" r="3"/>
+      </svg>
+      <span>Dilihat</span>
+      <b id="viewCount">{{ views }}</b>
     </div>
   </div>
 
@@ -430,8 +553,148 @@
     {% endif %}
   {% endif %}
 
+  <!-- RATING -->
+  <div class="card">
+    <div class="card-head">
+      <div class="title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+        Rating
+      </div>
+    </div>
+    <div class="rate-body">
+      <div class="stars" id="stars" role="radiogroup" aria-label="Rating">
+        <button type="button" data-value="1" aria-label="1 bintang">
+          <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </button>
+        <button type="button" data-value="2" aria-label="2 bintang">
+          <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </button>
+        <button type="button" data-value="3" aria-label="3 bintang">
+          <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </button>
+        <button type="button" data-value="4" aria-label="4 bintang">
+          <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </button>
+        <button type="button" data-value="5" aria-label="5 bintang">
+          <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </button>
+      </div>
+      <div class="rate-meta">
+        Rating anda: <b id="rateValue">—</b> / 5 · Purata: <b id="rateAvg">{{ "%.1f"|format(rate.avg) }}</b>
+      </div>
+
+      <form class="comment-form" id="commentForm">
+        <div class="input-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+          <input type="text" id="cName" placeholder="Nama" maxlength="40" required>
+        </div>
+        <textarea id="cText" placeholder="Komentar..." maxlength="300" required></textarea>
+        <button type="submit" class="send">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+          Hantar
+        </button>
+      </form>
+
+      <div class="comment-list" id="commentList"></div>
+    </div>
+  </div>
+
   <div class="foot">© WA'IE</div>
 
 </div>
+
+<script>
+(function () {
+  const rateValueEl = document.getElementById('rateValue');
+  const rateAvgEl = document.getElementById('rateAvg');
+  const starBtns = Array.from(document.querySelectorAll('#stars button'));
+  const listEl = document.getElementById('commentList');
+  const formEl = document.getElementById('commentForm');
+  const nameEl = document.getElementById('cName');
+  const textEl = document.getElementById('cText');
+
+  let myRate = 0;
+
+  function paintStars(v, cls) {
+    starBtns.forEach((b, i) => {
+      b.classList.remove('active', 'hover');
+      if (i < v) b.classList.add(cls);
+    });
+  }
+
+  starBtns.forEach((btn, idx) => {
+    btn.addEventListener('mouseenter', () => paintStars(idx + 1, 'hover'));
+    btn.addEventListener('mouseleave', () => paintStars(myRate, 'active'));
+    btn.addEventListener('click', async () => {
+      myRate = idx + 1;
+      paintStars(myRate, 'active');
+      rateValueEl.textContent = myRate;
+      try {
+        const r = await fetch('/api/rate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value: myRate })
+        });
+        if (!r.ok) throw 0;
+        const meta = await fetch('/api/rate', { method: 'GET' }).catch(() => null);
+        // refresh average via server-rendered value on next reload; biar ringan
+      } catch (e) {}
+    });
+  });
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
+
+  function renderComments(arr) {
+    if (!arr || !arr.length) {
+      listEl.innerHTML = '<div class="empty-comment">Belum ada komentar.</div>';
+      return;
+    }
+    listEl.innerHTML = arr.map(c => `
+      <div class="comment-item">
+        <div class="meta">
+          <span class="name">${escapeHtml(c.name)}</span>
+          <span class="time">${escapeHtml(new Date(c.created_at).toLocaleString('ms-MY'))}</span>
+        </div>
+        <div class="text">${escapeHtml(c.text)}</div>
+      </div>
+    `).join('');
+  }
+
+  renderComments({{ comments|tojson }});
+
+  formEl.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = nameEl.value.trim();
+    const text = textEl.value.trim();
+    if (!name || !text) return;
+
+    try {
+      const r = await fetch('/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, text })
+      });
+      if (!r.ok) throw 0;
+      const refresh = await fetch('/api/comments', { method: 'GET' });
+      renderComments(refresh.ok ? await refresh.json() : []);
+      textEl.value = '';
+    } catch (e) {
+      alert('Gagal hantar komentar.');
+    }
+  });
+})();
+</script>
 </body>
-</html>
+          </html> 
