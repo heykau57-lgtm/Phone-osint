@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phone OSINT — Lookup</title>
+<style>
+  :root{
+    --bg: #eef1f4;
+    --surface: #ffffff;
+    --surface-2: #f7f9fb;
+    --border: #d8dee6;
+    --border-strong: #b9c3cf;
+    --text: #0d1117;
+    --text-dim: #5b6675;
+    --text-soft: #8b95a3;
+    --accent: #0d1117;
+    --cyan: #00e5ff;
+    --cyan-deep: #00b8cc;
+    --cyan-soft: #e0fbff;
+    --ok: #16a34a;
+    --bad: #dc2626;
+    --radius: 14px;
+    --shadow-sm: 0 1px 2px rgba(13,17,23,.06);
+    --shadow-md: 0 6px 24px rgba(13,17,23,.08);
+    --shadow-cyan: 0 0 0 3px rgba(0,229,255,.18);
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+
+  body{
+    background:
+      radial-gradient(1200px 400px at 50% -100px, rgba(0,229,255,.10), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 44px 20px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap{ width:100%; max-width: 640px; }
+
+  /* Header */
+  .head{
+    display:flex; align-items:center; gap:14px;
+    margin-bottom: 30px;
+  }
+  .logo{
+    width:44px; height:44px; border-radius:13px;
+    background: linear-gradient(145deg, #0d1117, #1c2530);
+    color: var(--cyan);
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: 0 4px 14px rgba(0,229,255,.28), inset 0 0 0 1px rgba(0,229,255,.25);
+    flex-shrink: 0;
+  }
+  .logo svg{ width:22px; height:22px; filter: drop-shadow(0 0 6px rgba(0,229,255,.8)); }
+  .head h1{
+    font-size: 1.18rem; font-weight: 700; letter-spacing:-.015em;
+  }
+  .head h1 span{ color: var(--cyan-deep); }
+  .head p{
+    font-size: .78rem; color: var(--text-dim); margin-top:3px; letter-spacing:.02em;
+  }
+
+  /* Search Card */
+  .search-card{
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow-md);
+    margin-bottom: 22px;
+    overflow: hidden;
+  }
+  .search-card::before{
+    content:"";
+    position:absolute; top:0; left:0; right:0; height:3px;
+    background: linear-gradient(90deg, var(--cyan), var(--cyan-deep));
+  }
+  .search-card label{
+    display:block;
+    font-size:.72rem; font-weight:700; color: var(--text-dim);
+    margin-bottom:9px; letter-spacing:.08em; text-transform: uppercase;
+  }
+  .input-row{ display:flex; gap:10px; }
+  .input-wrap{
+    flex:1; position:relative;
+    display:flex; align-items:center;
+  }
+  .input-wrap > svg{
+    position:absolute; left:14px;
+    width:16px; height:16px;
+    color: var(--text-soft);
+    pointer-events:none;
+    transition: color .15s;
+  }
+  .input-wrap:focus-within > svg{ color: var(--cyan-deep); }
+  input[type=text]{
+    width:100%;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 13px 14px 13px 42px;
+    font-size:.94rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    border-radius: 10px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s, background .15s;
+  }
+  input[type=text]::placeholder{ color: var(--text-soft); font-family: inherit; }
+  input[type=text]:focus{
+    border-color: var(--cyan-deep);
+    background: var(--surface);
+    box-shadow: var(--shadow-cyan);
+  }
+  button{
+    display:flex; align-items:center; gap:8px;
+    background: var(--accent); color:#fff;
+    border: none; cursor: pointer;
+    padding: 13px 22px;
+    font-size:.86rem; font-weight: 700;
+    font-family: inherit;
+    letter-spacing:.05em; text-transform: uppercase;
+    border-radius: 10px;
+    transition: transform .1s, box-shadow .2s, background .2s;
+    white-space: nowrap;
+  }
+  button:hover{
+    background: #1c2530;
+    box-shadow: 0 0 0 3px rgba(0,229,255,.25);
+  }
+  button:active{ transform: scale(.97); }
+  button svg{ width:15px; height:15px; color: var(--cyan); }
+
+  /* Cards */
+  .card{
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .card-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, var(--surface), var(--surface-2));
+    gap: 12px;
+  }
+  .card-head .title{
+    display:flex; align-items:center; gap:8px;
+    font-size:.78rem; font-weight:700; letter-spacing:.08em; text-transform: uppercase;
+  }
+  .card-head .title svg{ width:15px; height:15px; color: var(--cyan-deep); }
+
+  .badge{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:.7rem; font-weight:700;
+    padding: 5px 11px; border-radius: 999px;
+    white-space: nowrap;
+    letter-spacing:.05em; text-transform: uppercase;
+  }
+  .badge.ok{ background:#ecfdf3; color: var(--ok); border:1px solid #b3f0cc; }
+  .badge.bad{ background:#fef2f2; color: var(--bad); border:1px solid #fecaca; }
+  .badge .dot{
+    width:6px; height:6px; border-radius:50%; background: currentColor;
+    box-shadow: 0 0 0 3px rgba(22,163,74,.15);
+  }
+  .badge.bad .dot{ box-shadow: 0 0 0 3px rgba(220,38,38,.15); }
+
+  /* Data rows */
+  .data{ padding: 4px 20px 16px; }
+  .row{
+    display:flex; align-items:flex-start; justify-content:space-between;
+    gap: 16px;
+    padding: 13px 0;
+    border-bottom: 1px dashed var(--border);
+    font-size:.87rem;
+  }
+  .row:last-child{ border-bottom: none; }
+  .row .k{
+    display:flex; align-items:center; gap:8px;
+    color: var(--text-dim);
+    flex-shrink: 0;
+    font-size:.8rem;
+    font-weight: 500;
+  }
+  .row .k svg{ width:14px; height:14px; color: var(--text-soft); }
+  .row .v{
+    text-align:right;
+    font-weight: 600;
+    color: var(--text);
+    word-break: break-word;
+  }
+  .row .v.mono{
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size:.85rem;
+    background: var(--cyan-soft);
+    padding: 3px 9px;
+    border-radius: 6px;
+    border: 1px solid rgba(0,229,255,.25);
+  }
+  .row .v a{
+    color: var(--cyan-deep);
+    text-decoration: none;
+    font-weight: 700;
+    border-bottom: 1px solid transparent;
+    display:inline-flex; align-items:center; gap:6px;
+    transition: border-color .15s;
+  }
+  .row .v a:hover{ border-bottom-color: var(--cyan-deep); }
+  .row .v a svg{ width:12px; height:12px; }
+
+  /* Logs */
+  .logs{
+    padding: 16px 20px 20px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size:.76rem;
+    line-height: 1.75;
+    max-height: 220px;
+    overflow-y: auto;
+    background: #0d1117;
+    color: #9feaf5;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .logs::-webkit-scrollbar{ width:6px; }
+  .logs::-webkit-scrollbar-thumb{ background: #1f2b3a; border-radius:3px; }
+
+  /* Error */
+  .card.err{ border-color: #fecaca; }
+  .card.err .card-head{ background: #fff5f5; }
+  .card.err .card-head .title{ color: var(--bad); }
+  .card.err .card-head .title svg{ color: var(--bad); }
+  .card.err .logs{ background:#1a0d0d; color:#ffb4b4; }
+
+  /* Footer */
+  .foot{
+    text-align:center;
+    font-size:.72rem;
+    color: var(--text);
+    margin-top: 28px;
+    letter-spacing:.06em;
+    font-weight: 500;
+  }
+
+  @media (max-width: 520px){
+    body{ padding: 26px 14px; }
+    .input-row{ flex-direction: column; }
+    button{ justify-content:center; }
+    .row{ flex-direction: column; gap:5px; }
+    .row .v{ text-align:left; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+        <circle cx="12" cy="12" r="9" opacity=".35"/>
+      </svg>
+    </div>
+    <div>
+      <h1>Phone <span>OSINT</span></h1>
+      <p>Carrier &amp; geo lookup</p>
+    </div>
+  </div>
+
+  <form method="POST" action="/">
+    <div class="search-card">
+      <label for="nombor">Nombor telefon</label>
+      <div class="input-row">
+        <div class="input-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.33 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>
+          </svg>
+          <input type="text" name="nombor" id="nombor"
+                 placeholder="+60123456789"
+                 value="{{ request.form.get('nombor', '') }}"
+                 required autocomplete="off">
+        </div>
+        <button type="submit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+          </svg>
+          Scan
+        </button>
+      </div>
+    </div>
+  </form>
+
+  {% if hasil %}
+    {% if hasil.error %}
+      <div class="card err">
+        <div class="card-head">
+          <div class="title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            Ralat
+          </div>
+        </div>
+        <div class="logs">{{ hasil.logs | join('\n') }}</div>
+      </div>
+    {% else %}
+      <div class="card">
+        <div class="card-head">
+          <div class="title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+            Hasil Analisis
+          </div>
+          {% if 'AKTIF' in hasil.status and 'TIDAK' not in hasil.status %}
+            <span class="badge ok"><span class="dot"></span>Aktif</span>
+          {% else %}
+            <span class="badge bad"><span class="dot"></span>Tidak Aktif</span>
+          {% endif %}
+        </div>
+
+        <div class="data">
+          <div class="row">
+            <div class="k">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="2" y1="12" x2="22" y2="12"/>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+              </svg>
+              Negara
+            </div>
+            <div class="v">{{ hasil.negara or '—' }}</div>
+          </div>
+
+          <div class="row">
+            <div class="k">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                <line x1="4" y1="22" x2="4" y2="15"/>
+              </svg>
+              Kod Negara
+            </div>
+            <div class="v mono">+{{ hasil.kod_negara }}</div>
+          </div>
+
+          <div class="row">
+            <div class="k">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+                <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+                <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+                <line x1="12" y1="20" x2="12.01" y2="20"/>
+              </svg>
+              Provider
+            </div>
+            <div class="v">{{ hasil.provider }}</div>
+          </div>
+
+          <div class="row">
+            <div class="k">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+              Zon Masa
+            </div>
+            <div class="v mono">{{ hasil.zon_masa }}</div>
+          </div>
+
+          <div class="row">
+            <div class="k">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <line x1="3" y1="9" x2="21" y2="9"/>
+                <line x1="9" y1="21" x2="9" y2="9"/>
+              </svg>
+              Format Penuh
+            </div>
+            <div class="v mono">{{ hasil.format }}</div>
+          </div>
+
+          <div class="row">
+            <div class="k">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+              </svg>
+              Truecaller
+            </div>
+            <div class="v">
+              <a href="{{ hasil.link }}" target="_blank" rel="noopener">
+                Buka lookup
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                  <polyline points="15 3 21 3 21 9"/>
+                  <line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="4 17 10 11 4 5"/>
+              <line x1="12" y1="19" x2="20" y2="19"/>
+            </svg>
+            Log Aktiviti
+          </div>
+        </div>
+        <div class="logs">{{ hasil.logs | join('\n') }}</div>
+      </div>
+    {% endif %}
+  {% endif %}
+
+  <div class="foot">© WA'IE</div>
+
+</div>
+</body>
+</html>
