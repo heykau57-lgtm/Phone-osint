@@ -21,9 +21,19 @@ def api_get(path, default=None):
         return default
 
 
-def api_post(path, payload):
+def api_post(path, payload, forwarded_ip=None):
     try:
-        r = requests.post(f"{API_BASE}{path}", json=payload, timeout=5)
+        headers = {}
+        if forwarded_ip:
+            # Hantar IP pengunjung asal ke API Node
+            headers['X-Forwarded-For'] = forwarded_ip
+
+        r = requests.post(
+            f"{API_BASE}{path}",
+            json=payload,
+            headers=headers,
+            timeout=5
+        )
         r.raise_for_status()
         return r.json()
     except Exception:
@@ -89,9 +99,13 @@ def index():
     rate = api_get('/api/rate', {'total': 0, 'avg': 0}) or {'total': 0, 'avg': 0}
     comments = api_get('/api/comments', []) or []
 
-    # bump view tiap GET halaman
+    # Bump view tiap GET halaman + ambil IP sebenar pengunjung
     if request.method == 'GET':
-        bumped = api_post('/api/views', {})
+        # Ambil IP dari header Vercel (X-Forwarded-For), fallback ke remote_addr
+        user_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+        
+        # Hantar IP tersebut ke API Node
+        bumped = api_post('/api/views', {}, forwarded_ip=user_ip)
         if bumped:
             views = bumped
 
@@ -125,4 +139,4 @@ def proxy_comment():
 @app.route('/api/comments', methods=['GET'])
 def proxy_comment_list():
     res = api_get('/api/comments', [])
-    return jsonify(res) 
+    return jsonify(res)
